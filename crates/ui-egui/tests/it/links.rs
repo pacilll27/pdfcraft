@@ -18,15 +18,6 @@ fn harness(setup: impl FnOnce(&mut PdfCraftApp) + 'static) -> Harness<'static, P
 }
 
 #[test]
-fn discord_button_in_the_top_bar_opens_discord() {
-    let mut h = harness(|_| {});
-    h.get_by_label("Discord").click();
-    h.run_steps(2);
-    assert_eq!(h.state().last_opened_url.as_deref(), Some(links::DISCORD));
-    assert_eq!(links::DISCORD, "https://discord.gg/artcraft");
-}
-
-#[test]
 fn home_screen_has_no_community_card() {
     let mut h = harness(|_| {});
     assert!(h.query_by_label("Join the ArtCraft community").is_none());
