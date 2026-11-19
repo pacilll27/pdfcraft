@@ -470,6 +470,9 @@ impl PdfCraftApp {
             // The field highlight a form asks for isn't about the current document: now.
             self.script_highlight(id, on);
         }
+        // Web deploy: recognize text as soon as a file is opened / uploaded.
+        #[cfg(target_arch = "wasm32")]
+        self.queue_ocr_on_open(id);
         Ok(id)
     }
 

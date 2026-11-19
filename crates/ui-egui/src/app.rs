@@ -325,7 +325,7 @@ impl PdfCraftApp {
             bookmark_rename: None,
             bookmark_clipboard: None,
             last_opened_url: None,
-            community_card_closed: false,
+            pending_open_ocr: None,
             pending_link: None,
             pending_full_screen: None,
             pending_window: None,
@@ -787,6 +787,7 @@ impl PdfCraftApp {
         }
         self.poll_export();
         self.auto_ocr_scanned_page();
+        self.poll_pending_open_ocr();
         self.poll_ocr();
         self.poll_optimize();
         self.poll_scan_clean();

@@ -512,6 +512,45 @@ impl PdfCraftApp {
         }
     }
 
+    /// After open/upload: run Recognize Text on every page that has no text yet.
+    pub(crate) fn queue_ocr_on_open(&mut self, id: DocId) {
+        if self.ocr_run.is_some() || self.ocr_batch_running() {
+            self.pending_open_ocr = Some(id);
+            return;
+        }
+        self.run_ocr_on_open(id);
+    }
+
+    /// Start a queued open-OCR once models are in and nothing else is reading.
+    pub(crate) fn poll_pending_open_ocr(&mut self) {
+        let Some(id) = self.pending_open_ocr else { return };
+        if self.ocr_run.is_some() || self.ocr_batch_running() || self.modal_open() {
+            return;
+        }
+        self.run_ocr_on_open(id);
+    }
+
+    fn run_ocr_on_open(&mut self, id: DocId) {
+        if self.session.get(id).is_none_or(|d| d.read_only_reason.is_some() || !d.allows_modification()) {
+            self.pending_open_ocr = None;
+            return;
+        }
+        let mut settings = self.ocr_draft.settings();
+        // Text PDFs stay alone; image-only pages get a searchable layer.
+        settings.skip_text_pages = true;
+        #[cfg(target_arch = "wasm32")]
+        if self.web_models_missing(settings.engine) {
+            self.pending_open_ocr = Some(id);
+            return;
+        }
+        if pdfcraft_engine::ocr::engine_unavailable_reason(settings.engine).is_some() {
+            self.pending_open_ocr = Some(id);
+            return;
+        }
+        self.pending_open_ocr = None;
+        self.start_ocr_pages(id, &[], settings, false);
+    }
+
     /// The page Edit should read now, if there is one: Edit is on outside Read mode with no dialog
     /// open, nothing else is being recognized, the document may be changed, the page in view has
     /// not been read before (nor been found no scan since the document last changed), and an image
