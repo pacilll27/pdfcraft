@@ -20,8 +20,14 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      # Prebuilt binary — `cargo install trunk` can take 20+ minutes compiling.
       - name: Install trunk
-        run: cargo install trunk --locked
+        run: |
+          set -euo pipefail
+          VER=0.22.1
+          curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${VER}/trunk-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C /usr/local/bin trunk
+          trunk --version
 
       - name: Package web zip
         run: bash packaging/web/package.sh
