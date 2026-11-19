@@ -550,6 +550,23 @@ pub fn group(id: &str) -> Option<&'static ToolGroup> {
     TOOL_GROUPS.iter().find(|g| g.id == id)
 }
 
+/// Whether a catalogue entry ships in this build (`Ready` only; not Planned or Provider/AI).
+pub fn is_shipped(a: Availability) -> bool {
+    matches!(a, Availability::Ready)
+}
+
+/// Whether All tools / menus should list this group: it has at least one shipped item.
+/// Planned-only groups (JavaScript, search index) and AI (`Provider`) stay hidden until upstream
+/// marks items `Ready`.
+pub fn group_is_visible(g: &ToolGroup) -> bool {
+    g.sections.iter().flat_map(|s| s.items.iter()).any(|i| is_shipped(i.availability))
+}
+
+/// Groups that belong in All tools, in catalogue order.
+pub fn visible_groups() -> impl Iterator<Item = &'static ToolGroup> {
+    TOOL_GROUPS.iter().filter(|g| group_is_visible(g))
+}
+
 /// A heading of the expanded All tools view, as Acrobat files its tools under "Create & Edit",
 /// "Forms & Signatures" and so on. Every group belongs to exactly one category.
 #[derive(Clone, Copy, Debug)]
@@ -579,6 +596,16 @@ mod tests {
             assert!(seen.insert(g.id), "duplicate group id {}", g.id);
             assert!(g.sections.iter().any(|s| !s.items.is_empty()), "{} has no items", g.id);
         }
+    }
+
+    #[test]
+    fn visible_groups_hide_planned_only_and_ai() {
+        assert!(!group_is_visible(group("javascript").expect("javascript")), "all-Planned group stays hidden");
+        assert!(!group_is_visible(group("ai").expect("ai")), "AI provider group stays hidden");
+        assert!(!group_is_visible(group("search_index").expect("search_index")), "Planned-only index stays hidden");
+        assert!(group_is_visible(group("organize").expect("organize")), "Ready items keep Organize visible");
+        assert!(group_is_visible(group("edit").expect("edit")), "Edit stays visible while it has Ready items");
+        assert!(visible_groups().all(|g| group_is_visible(g)));
     }
 
     #[test]

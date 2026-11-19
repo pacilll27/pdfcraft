@@ -59,7 +59,7 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
         widgets::section_title(ui, tl!("Modify page"));
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
-            for i in EDIT_PAGE_BUTTONS.iter().filter_map(|c| item(c)) {
+            for i in EDIT_PAGE_BUTTONS.iter().filter_map(|c| item(c)).filter(|i| catalog::is_shipped(i.availability)) {
                 // Enabled as the command itself is: a document that forbids page assembly refuses these.
                 let enabled = pdfcraft_engine::commands::command(i.command).is_some_and(|spec| app.command_enabled(spec));
                 let resp = ui.add_enabled_ui(enabled, |ui| icons::button(ui, i.icon, 34.0, false, tl!(i.label))).inner;
@@ -70,7 +70,7 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
         });
         ui.add_space(2.0);
         // Organize pages is a workspace of its own: its panel replaces this one, with the grid.
-        if let Some(i) = item("page.organize")
+        if let Some(i) = item("page.organize").filter(|i| catalog::is_shipped(i.availability))
             && edit_row(ui, t, i.icon, tl!(i.label), i.availability).clicked()
         {
             // With no document there is no grid to open: the command asks for a file first.
@@ -82,8 +82,14 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
         }
 
         widgets::section_title(ui, tl!("Add content"));
-        let content: Vec<_> =
-            g.sections.iter().filter(|s| s.title == "Add content").flat_map(|s| s.items.iter()).filter(|i| i.command != "edit.edit_text").collect();
+        let content: Vec<_> = g
+            .sections
+            .iter()
+            .filter(|s| s.title == "Add content")
+            .flat_map(|s| s.items.iter())
+            .filter(|i| catalog::is_shipped(i.availability))
+            .filter(|i| i.command != "edit.edit_text")
+            .collect();
         let more_id = egui::Id::unique("edit_panel_more");
         let more = ui.data(|d| d.get_temp::<bool>(more_id)).unwrap_or(false);
         let shown = if more { content.len() } else { EDIT_CONTENT_SHOWN.min(content.len()) };
@@ -114,7 +120,7 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
         }
 
         widgets::section_title(ui, tl!("Other options"));
-        for other in EDIT_OTHER_TOOLS.iter().filter_map(|id| catalog::group(id)) {
+        for other in EDIT_OTHER_TOOLS.iter().filter_map(|id| catalog::group(id)).filter(|g| catalog::group_is_visible(g)) {
             if edit_row(ui, t, other.icon, tl!(other.label), other.availability).clicked() {
                 tool = Some(other.id);
             }

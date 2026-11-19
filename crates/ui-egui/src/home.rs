@@ -52,7 +52,15 @@ fn tool_card(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static c
     let title = ui.fonts_mut(|f| f.layout_job(title_job));
     let title_elided = title.elided;
     ui.painter().galley(body.min + vec2(44.0, 25.0 - title.size().y * 0.5), title, t.text);
-    let blurb = g.sections.first().map(|s| s.items.iter().take(3).map(|i| tl!(i.label)).collect::<Vec<_>>().join(" · ")).unwrap_or_default();
+    let blurb = g
+        .sections
+        .iter()
+        .flat_map(|s| s.items.iter())
+        .filter(|i| catalog::is_shipped(i.availability))
+        .take(3)
+        .map(|i| tl!(i.label))
+        .collect::<Vec<_>>()
+        .join(" · ");
     // Fixed-height cards must leave room for their action in every language.
     let mut job = egui::text::LayoutJob::simple(blurb.clone(), theme::regular(11.5), t.text_muted, body.width() - 28.0);
     job.wrap.max_rows = 2;
@@ -76,9 +84,9 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
-            ui.label(egui::RichText::new(tl!("Welcome to PdfCraft")).font(theme::semibold(24.0)));
+            ui.label(egui::RichText::new(tl!("Welcome to ACI PDF")).font(theme::semibold(24.0)));
             ui.label(
-                egui::RichText::new(tl!("An open-source PDF workbench — local, private, and scriptable."))
+                egui::RichText::new(tl!("ACI PDF solution — local and private."))
                     .color(t.text_muted)
                     .font(theme::regular(14.0)),
             );
@@ -99,7 +107,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                             if app.is_tool_pinned(id) {
                                 continue;
                             }
-                            let Some(g) = catalog::group(id) else { continue };
+                            let Some(g) = catalog::group(id).filter(|g| catalog::group_is_visible(g)) else { continue };
                             tool_card(app, ui, &t, g, false);
                         }
                         let (rect, resp) = ui.allocate_exact_size(vec2(170.0, 104.0), Sense::click());
@@ -141,7 +149,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = vec2(14.0, 14.0);
                     for id in &pinned {
-                        let Some(g) = catalog::group(id) else { continue };
+                        let Some(g) = catalog::group(id).filter(|g| catalog::group_is_visible(g)) else { continue };
                         if let Some(to_unpin) = tool_card(app, ui, &t, g, true) {
                             unpin_tool = Some(to_unpin);
                         }
@@ -174,7 +182,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 });
                 ui.add_space(8.0);
                 if app.recent.is_empty() {
-                    ui.label(egui::RichText::new(tl!("Files you open in PdfCraft appear here. Drop a PDF anywhere to open it.")).color(t.text_muted));
+                    ui.label(egui::RichText::new(tl!("Files you open appear here. Drop a PDF anywhere to open it.")).color(t.text_muted));
                 }
             }
             let mut open = None;
@@ -265,7 +273,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             ui.add_space(20.0);
             widgets::section_title(ui, tl!("Privacy"));
             ui.label(
-                egui::RichText::new(tl!("PdfCraft works offline. No telemetry, no account, and no cloud processing unless you add a provider."))
+                egui::RichText::new(tl!("ACI PDF works offline. No telemetry, no account, and no cloud processing."))
                     .color(t.text_muted),
             );
         });

@@ -1,6 +1,6 @@
 use super::edit::{actions_menu, edit_panel, stamp_palette};
 use super::{
-    Align2, Availability, Color32, CornerRadius, LeftPanel, PdfCraftApp, Rect, Sense, Stroke, TOOL_GROUPS, Tokens, ToolGroup, catalog, icons, theme,
+    Align2, Availability, Color32, CornerRadius, LeftPanel, PdfCraftApp, Rect, Sense, Stroke, Tokens, ToolGroup, catalog, icons, theme,
     vec2, widgets,
 };
 
@@ -23,7 +23,7 @@ pub fn left_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             // Organize pages has its own panel whenever the grid shows (with a document open).
             _ if app.active.is_some() && crate::organize_panel::showing(app) => crate::organize_panel::panel(app, ui, &t),
             LeftPanel::AllTools => all_tools(app, ui, &t),
-            LeftPanel::Tool(id) => match catalog::group(id) {
+            LeftPanel::Tool(id) => match catalog::group(id).filter(|g| catalog::group_is_visible(g)) {
                 Some(g) => tool_detail(app, ui, &t, g),
                 None => app.left = LeftPanel::AllTools,
             },
@@ -81,8 +81,9 @@ fn all_tools(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         clear_of_scrollbar(ui);
         ui.add_space(2.0);
-        let shown = if app.all_tools_expanded { TOOL_GROUPS.len() } else { COLLAPSED_TOOLS.min(TOOL_GROUPS.len()) };
-        for g in &TOOL_GROUPS[..shown] {
+        let visible: Vec<_> = catalog::visible_groups().collect();
+        let shown = if app.all_tools_expanded { visible.len() } else { COLLAPSED_TOOLS.min(visible.len()) };
+        for g in visible.into_iter().take(shown) {
             let (resp, pin_clicked) = tool_row(ui, t, g, app.is_tool_pinned(g.id));
             if pin_clicked {
                 app.toggle_pin_tool(g.id);
@@ -208,16 +209,8 @@ fn tool_detail(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static
     if close {
         app.left_open = false;
     }
-    if let Availability::Planned(m) = g.availability {
-        egui::Frame::NONE.fill(t.accent_soft).corner_radius(CornerRadius::same(8)).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.label(
-                egui::RichText::new(format!("{} {m}. {}", tl!("Coming in milestone"), tl!("Items marked Ready work today.")))
-                    .color(t.text)
-                    .font(theme::regular(12.0)),
-            );
-        });
-    }
+    // Planned-only groups are filtered out of All tools; if a mixed group still has Planned
+    // items, skip the milestone banner — those rows are hidden below.
     if g.id == "measure" {
         crate::measure_ui::panel(app, ui, t);
         return;
@@ -254,37 +247,29 @@ fn tool_detail(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static
         clear_of_scrollbar(ui);
         ui.add_space(2.0);
         for s in g.sections {
+            let shipped: Vec<_> = s.items.iter().filter(|i| catalog::is_shipped(i.availability)).collect();
+            if shipped.is_empty() {
+                continue;
+            }
             widgets::section_title(ui, tl!(s.title));
-            for item in s.items {
+            for item in shipped {
                 if g.id == "fill_sign" && (item.command.starts_with("sign.fill.signature") || item.command.starts_with("sign.fill.initials")) {
                     continue;
                 }
                 let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
                 resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(item.label)));
-                let ready = item.availability == Availability::Ready;
                 let press = theme::Press::track(ui, &resp);
                 press.wash(ui, rect, 6, false);
                 let body = rect.translate(press.offset());
-                let fg = if ready { t.text } else { t.text_muted };
-                icons::paint(
-                    ui,
-                    Rect::from_min_size(body.min + vec2(6.0, 8.0), vec2(18.0, 18.0)),
-                    item.icon,
-                    17.0,
-                    if ready { hue(g) } else { t.text_faint },
-                );
-                let (chip, fill, cfg) = match item.availability {
-                    Availability::Ready => (tl!("Ready"), Color32::from_rgb(0xDD, 0xF3, 0xE4), Color32::from_rgb(0x1E, 0x7B, 0x43)),
-                    Availability::Planned(m) => (m, t.pressed, t.text_muted),
-                    Availability::Provider => ("AI", t.pressed, t.text_muted),
-                };
+                let fg = t.text;
+                icons::paint(ui, Rect::from_min_size(body.min + vec2(6.0, 8.0), vec2(18.0, 18.0)), item.icon, 17.0, hue(g));
+                let chip_label = tl!("Ready").to_string();
                 let font = theme::semibold(9.5);
-                let chip_label = tl!(chip).to_string();
                 let w = crate::widgets::text_width(ui, &chip_label, &font);
                 let r = Rect::from_center_size(body.right_center() - vec2(w / 2.0 + 10.0, 0.0), vec2(w + 10.0, 16.0));
                 row_label(ui, tl!(item.label), theme::regular(13.0), fg, body.left_center() + vec2(34.0, 0.0), r.left() - body.left() - 42.0);
-                ui.painter().rect_filled(r, CornerRadius::same(4), fill);
-                ui.painter().text(r.center(), Align2::CENTER_CENTER, chip_label, font, cfg);
+                ui.painter().rect_filled(r, CornerRadius::same(4), Color32::from_rgb(0xDD, 0xF3, 0xE4));
+                ui.painter().text(r.center(), Align2::CENTER_CENTER, chip_label, font, Color32::from_rgb(0x1E, 0x7B, 0x43));
                 let resp = theme::hand(resp).on_hover_text(format!("{} — {}", tl!(item.label), item.command));
                 // An entry with further commands opens a menu; its caret goes before the chip.
                 if item.actions.is_empty() {

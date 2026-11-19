@@ -148,7 +148,10 @@ pub(crate) fn panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
             ("presentation", "Page transitions", Availability::Later, Some("page.transitions")),
             ("file-text", "Page templates", Availability::Later, None),
             ("printer", "Print pages", Availability::Ready, Some("print.dialog")),
-        ] {
+        ]
+        .into_iter()
+        .filter(|(_, _, availability, _)| *availability == Availability::Ready)
+        {
             if row(ui, t, icon, tl!(label), availability, false).clicked()
                 && let Some(command) = command
             {

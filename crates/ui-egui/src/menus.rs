@@ -11,7 +11,7 @@ use craft_keymap::{Key, Mods};
 use craft_menu::{
     Builtin, Chord, CommandRef, Document, Gate, Item, ItemRole, ItemState, Labeled, LayoutOptions, Menu, MenuBar, MenuRole, Node, Target,
 };
-use pdfcraft_engine::catalog::{Availability, TOOL_GROUPS};
+use pdfcraft_engine::catalog::{self, TOOL_GROUPS};
 use pdfcraft_engine::commands::{self, Shortcut};
 
 use crate::canvas::{Fit, PageLayout};
@@ -228,7 +228,7 @@ const SIGN: &[&str] = &[
 ];
 const WINDOW: &[&str] = &["view.next_tab", "view.previous_tab"];
 const HELP: &[&str] =
-    &["help.shortcuts", SEP, "help.app_page", "help.github", "help.website", "help.discord", SEP, "help.check_updates", SEP, "help.about"];
+    &["help.shortcuts"];
 
 /// A registry shortcut as a craft-keymap chord: `command` is ⌘ (Ctrl elsewhere) and `mac_ctrl`
 /// the Control key on macOS. `None` for a key craft-keymap doesn't name.
@@ -430,13 +430,13 @@ impl PdfCraftApp {
     fn tools_menu(&self, used: &[&str], mac: bool) -> Vec<Node> {
         TOOL_GROUPS
             .iter()
-            .filter(|g| g.availability == Availability::Ready)
+            .filter(|g| catalog::group_is_visible(g))
             .map(|group| {
                 let mut nodes = Vec::new();
                 let mut seen: Vec<&str> = Vec::new();
                 for section in group.sections {
                     nodes.push(Node::Separator);
-                    for tool in section.items.iter().filter(|t| t.availability == Availability::Ready) {
+                    for tool in section.items.iter().filter(|t| catalog::is_shipped(t.availability)) {
                         let actions: &[&'static str] = if tool.actions.is_empty() { std::slice::from_ref(&tool.command) } else { tool.actions };
                         for &id in actions {
                             if commands::command(id).is_none() || used.contains(&id) || seen.contains(&id) {

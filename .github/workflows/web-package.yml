@@ -45,8 +45,8 @@ jobs:
         run: |
           set -euo pipefail
           ZIP=$(ls dist/release/pdfcraft-web-*.zip | head -n1)
-          TAG=web-deploy-2
-          if gh release view "$TAG" >/dev/null 2>&1; then TAG=web-deploy-2b; fi
+          TAG=web-deploy-3
+          if gh release view "$TAG" >/dev/null 2>&1; then TAG=web-deploy-3b; fi
           gh release create "$TAG" "$ZIP" \
             --title "Web deploy (${TAG})" \
-            --notes "Static web build from \`${GITHUB_SHA:0:9}\` (Discord title-bar removed, auto-OCR, no community banner)."
+            --notes "Static web build from \`${GITHUB_SHA:0:9}\` (hide Planned/AI tools; Discord title-bar removed; auto-OCR; no community banner)."

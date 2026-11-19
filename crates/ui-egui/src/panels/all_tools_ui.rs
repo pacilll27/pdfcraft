@@ -27,16 +27,26 @@ fn label_hit(label: &str, translated: &str, query: &str, rtl: bool) -> bool {
 /// name did. An entry with a menu (Watermark: Add, Update, Remove) also matches by its commands'
 /// names, so "remove watermark" finds it.
 fn matches(query: &str, group: &ToolGroup) -> Option<Vec<&'static str>> {
+    if !catalog::group_is_visible(group) {
+        return None;
+    }
     let rtl = crate::i18n::current().rtl();
     let hit = |label: &str| label_hit(label, tl!(label), query, rtl);
+    let shipped = |i: &&catalog::ToolItem| catalog::is_shipped(i.availability);
     if query.is_empty() || hit(group.label) {
         return Some(Vec::new());
     }
     let action_hit = |id: &&str| {
         pdfcraft_engine::commands::command(id).is_some_and(|spec| label_hit(spec.label, &crate::i18n::menu_label(spec.id, spec.label), query, rtl))
     };
-    let items: Vec<_> =
-        group.sections.iter().flat_map(|s| s.items.iter()).filter(|i| hit(i.label) || i.actions.iter().any(action_hit)).map(|i| i.label).collect();
+    let items: Vec<_> = group
+        .sections
+        .iter()
+        .flat_map(|s| s.items.iter())
+        .filter(shipped)
+        .filter(|i| hit(i.label) || i.actions.iter().any(action_hit))
+        .map(|i| i.label)
+        .collect();
     (!items.is_empty()).then_some(items)
 }
 

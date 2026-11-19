@@ -2,7 +2,7 @@
 //! catalogue, with a fuzzy-ish substring match.
 
 use egui::{Align2, CornerRadius, Rect, Sense, Stroke, vec2};
-use pdfcraft_engine::catalog::{Availability, TOOL_GROUPS};
+use pdfcraft_engine::catalog::{self, TOOL_GROUPS};
 
 use crate::theme::{self, Tokens};
 use crate::{PdfCraftApp, icons};
@@ -77,7 +77,7 @@ pub fn show(app: &mut PdfCraftApp, ctx: &egui::Context) {
             ));
         }
     }
-    for g in TOOL_GROUPS {
+    for g in TOOL_GROUPS.iter().filter(|g| catalog::group_is_visible(g)) {
         if let Some(s) = score(tl!(g.label), &q).or_else(|| score(g.label, &q)) {
             hits.push((
                 s,
@@ -87,12 +87,12 @@ pub fn show(app: &mut PdfCraftApp, ctx: &egui::Context) {
                     detail: tl!("Tool").into(),
                     icon: g.icon,
                     command: None,
-                    ready: g.availability == Availability::Ready,
+                    ready: true,
                 },
             ));
         }
         for sec in g.sections {
-            for i in sec.items {
+            for i in sec.items.iter().filter(|i| catalog::is_shipped(i.availability)) {
                 if pdfcraft_engine::commands::command(i.command).is_some() {
                     continue; // listed above as a command
                 }
@@ -105,7 +105,7 @@ pub fn show(app: &mut PdfCraftApp, ctx: &egui::Context) {
                             detail: tl!(g.label).into(),
                             icon: i.icon,
                             command: Some(i.command),
-                            ready: i.availability == Availability::Ready,
+                            ready: true,
                         },
                     ));
                 }

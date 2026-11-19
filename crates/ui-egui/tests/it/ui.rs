@@ -120,8 +120,11 @@ fn every_catalog_tool_is_listed_after_view_more() {
     let mut h = harness(|_| {});
     h.get_by_label("View more").click();
     h.run_steps(3);
-    for g in pdfcraft_engine::catalog::TOOL_GROUPS {
+    for g in pdfcraft_engine::catalog::visible_groups() {
         assert!(h.query_all_by_label(g.label).count() >= 1, "tool {} missing from All tools", g.label);
+    }
+    for g in pdfcraft_engine::catalog::TOOL_GROUPS.iter().filter(|g| !pdfcraft_engine::catalog::group_is_visible(g)) {
+        assert_eq!(h.query_all_by_label(g.label).count(), 0, "unshipped tool {} should stay hidden", g.label);
     }
 }
 
@@ -134,8 +137,11 @@ fn expanded_all_tools_lists_every_tool_by_category_and_searches() {
     for c in pdfcraft_engine::catalog::TOOL_CATEGORIES {
         h.get_by_label(c.label);
     }
-    for g in pdfcraft_engine::catalog::TOOL_GROUPS {
+    for g in pdfcraft_engine::catalog::visible_groups() {
         assert!(h.query_all_by_label(g.label).count() >= 1, "tool {} missing from the expanded view", g.label);
+    }
+    for g in pdfcraft_engine::catalog::TOOL_GROUPS.iter().filter(|g| !pdfcraft_engine::catalog::group_is_visible(g)) {
+        assert_eq!(h.query_all_by_label(g.label).count(), 0, "unshipped tool {} should stay hidden in the expanded view", g.label);
     }
     // An item name finds its tool; the other categories drop out.
     h.state_mut().all_tools_query = "rotate".into();

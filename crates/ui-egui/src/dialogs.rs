@@ -1733,9 +1733,17 @@ fn dialog_pin_tool(ui: &mut egui::Ui, app: &mut PdfCraftApp, req: &mut Pending) 
     let query = app.pin_tool_search.trim().to_lowercase();
     egui::ScrollArea::vertical().max_height(380.0).auto_shrink([false, true]).show(ui, |ui| {
         let mut toggle = None;
-        for g in pdfcraft_engine::catalog::TOOL_GROUPS {
+        for g in pdfcraft_engine::catalog::visible_groups() {
             let label = tl!(g.label);
-            let blurb = g.sections.first().map(|s| s.items.iter().take(4).map(|i| tl!(i.label)).collect::<Vec<_>>().join(" • ")).unwrap_or_default();
+            let blurb = g
+                .sections
+                .iter()
+                .flat_map(|s| s.items.iter())
+                .filter(|i| pdfcraft_engine::catalog::is_shipped(i.availability))
+                .take(4)
+                .map(|i| tl!(i.label))
+                .collect::<Vec<_>>()
+                .join(" • ");
             if !query.is_empty()
                 && !label.to_lowercase().contains(&query)
                 && !blurb.to_lowercase().contains(&query)
