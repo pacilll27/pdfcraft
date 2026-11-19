@@ -47,19 +47,14 @@ impl PdfCraftApp {
                 .map_or_else(|| "PdfCraft".to_owned(), |name| format!("{name}{mark} — PdfCraft"))
         };
         let title = titled(front.and_then(|i| crate::canvas::tab_label(self, i)));
-        // The web page's title is what an embedding host reads to tell which file opened, so it
-        // names the file even when the document asks to show its own title.
+        // Track the file-based title for hosts that read `page_title`; do not write
+        // `document.title` — the HTML `<title>` in index.html owns the browser tab.
         let page_title = titled(front.and_then(|i| self.views.get(i)).and_then(|v| self.session.get(v.id)).map(|d| d.name.clone()));
         if title != self.window_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.window_title = title;
         }
         if page_title != self.page_title {
-            // eframe's web runner ignores Title: set the page's own.
-            #[cfg(target_arch = "wasm32")]
-            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
-                document.set_title(&page_title);
-            }
             self.page_title = page_title;
         }
     }
