@@ -1,13 +1,13 @@
-# Fork-only: build the static web zip (OCR models included) and upload it as an artifact.
+# Fork-only: build the static web zip (OCR models included) and upload it as an artifact / release.
 name: Web package
 
 on:
   workflow_dispatch:
   push:
-    branches: [deploy/web-auto-ocr-no-banner]
+    branches: [main, deploy/web-auto-ocr-no-banner]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   web:
@@ -36,5 +36,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pdfcraft-web
-          path: dist/pdfcraft-web-*.zip
+          path: dist/release/pdfcraft-web-*.zip
           if-no-files-found: error
+
+      - name: Publish release web-deploy-2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ZIP=$(ls dist/release/pdfcraft-web-*.zip | head -n1)
+          TAG=web-deploy-2
+          if gh release view "$TAG" >/dev/null 2>&1; then TAG=web-deploy-2b; fi
+          gh release create "$TAG" "$ZIP" \
+            --title "Web deploy (${TAG})" \
+            --notes "Static web build from \`${GITHUB_SHA:0:9}\` (Discord title-bar removed, auto-OCR, no community banner)."
