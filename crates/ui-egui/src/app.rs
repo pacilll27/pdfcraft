@@ -44,13 +44,16 @@ impl PdfCraftApp {
         let mark = if dirty { " •" } else { "" };
         let titled = |name: Option<String>| {
             name.or_else(|| self.combine_showing().then(|| tl!("Combine files").to_owned()))
-                .map_or_else(|| "PdfCraft".to_owned(), |name| format!("{name}{mark} — PdfCraft"))
+                .map_or_else(|| "PACE".to_owned(), |name| format!("{name}{mark} — PACE"))
         };
         let title = titled(front.and_then(|i| crate::canvas::tab_label(self, i)));
-        // Track the file-based title for hosts that read `page_title`; do not write
-        // `document.title` — the HTML `<title>` in index.html owns the browser tab.
+        // Track the file-based title for hosts that read `page_title`. Never write
+        // `document.title` on web — index.html owns the browser tab.
         let page_title = titled(front.and_then(|i| self.views.get(i)).and_then(|v| self.session.get(v.id)).map(|d| d.name.clone()));
         if title != self.window_title {
+            // Native window title only; eframe's web backend ignores Title, and we
+            // must not fight the HTML `<title>` (or a page-side title lock).
+            #[cfg(not(target_arch = "wasm32"))]
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.window_title = title;
         }

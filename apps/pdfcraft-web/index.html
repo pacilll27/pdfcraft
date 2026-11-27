@@ -3,7 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PdfCraft</title>
+    <title>PACE — PDF Assembly & Compilation Engine</title>
+    <!-- Keep the tab title fixed: the wasm build must not rename it. -->
+    <script>
+      (function () {
+        var fixed = document.title;
+        Object.defineProperty(document, "title", {
+          configurable: true,
+          enumerable: true,
+          get: function () { return fixed; },
+          set: function () { /* index.html owns the tab title */ },
+        });
+      })();
+    </script>
     <link data-trunk rel="rust" data-wasm-opt="z" />
     <!-- Recognises text off the page's thread (crates/ui-egui/src/workflows/ocr_web.rs). -->
     <link data-trunk rel="rust" href="../pdfcraft-ocr-worker/Cargo.toml" data-type="worker" data-loader-shim data-bindgen-target="web" data-wasm-opt="3" />

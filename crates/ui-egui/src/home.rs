@@ -84,9 +84,9 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
-            ui.label(egui::RichText::new(tl!("Welcome to ACI PDF")).font(theme::semibold(24.0)));
+            ui.label(egui::RichText::new(tl!("Welcome to PACE — PDF Assembly & Compilation Engine")).font(theme::semibold(24.0)));
             ui.label(
-                egui::RichText::new(tl!("ACI PDF solution — local and private."))
+                egui::RichText::new(tl!("PACE — PDF Assembly & Compilation Engine solution — local and private."))
                     .color(t.text_muted)
                     .font(theme::regular(14.0)),
             );
@@ -273,7 +273,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             ui.add_space(20.0);
             widgets::section_title(ui, tl!("Privacy"));
             ui.label(
-                egui::RichText::new(tl!("ACI PDF works offline. No telemetry, no account, and no cloud processing."))
+                egui::RichText::new(tl!("PACE — PDF Assembly & Compilation Engine works offline. No telemetry, no account, and no cloud processing."))
                     .color(t.text_muted),
             );
         });
